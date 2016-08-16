@@ -1,0 +1,278 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <link rel="stylesheet" href=@routes.Assets.versioned("stylesheets/common/view.css")>
+    <link rel="stylesheet" href=@routes.Assets.versioned("stylesheets/admin.css")>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+    <title>SI2Chip Setup</title>
+</head>
+<body ng-app="admin" ng-controller="adminCtrl">
+<nav class="navbar navbar-inverse">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="#">SI2Chip</a>
+        </div>
+        <ul class="nav navbar-nav navbar-right">
+            <li class="active"><a href="#"> Setup </a></li>
+            <li><a href="#" ng-click="showHome($event)"><span class="glyphicon glyphicon-home"></span> Home </a></li>
+        </ul>
+    </div>
+</nav>
+<div class="container">
+    <div class="row">
+        <div class="col-sm-6 col-sm-offset-3">
+            <div class="modal fade" id="conError" role="dialog">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <span>An error occurred transacting with the server.</span>
+                            <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            {{conerror}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm-6">
+            <div class="well well-lg">
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>
+                            <div class="text-center">
+                                <h4 id="adminmgmttitle">Admin Setup</h4>
+                            </div>
+                        </th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>
+                            <a href="#" ng-click="toggleAddAdminEditor($event)">Add admin<span ng-show="!angular.isUndefined(bShowAUE)&& bShowAUE" class="glyphicon glyphicon-menu-up"></span><span ng-show="angular.isUndefined(bShowAUE) || !bShowAUE" class="glyphicon glyphicon-menu-down"></span>
+                            </a>
+                            <div class="well well-sm" ng-show="!angular.isUndefined(bShowAUE) && bShowAUE">
+                                <form role="form" name="auf">
+                                    <div class="form-group">
+                                        <input type="email" class="form-control" maxlength="255" ng-model="nUserId" placeholder="Enter email id here" required name="userId">
+                                    </div>
+                                    <div class="form-group">
+                                        <input type="password" class="form-control" ng-model="nPassword" placeholder="Enter password here" name="password">
+                                    </div>
+                                    <div class="text-center">
+                                        <button type="submit" class="btn btn-default btn-sm" ng-click="addUser($event)">Add</button>
+                                    </div>
+                                </form>
+                                <span ng-show="auf.userId.$error.email" class="editmsgs">Not a valid e-mail address</span><br>
+                                <span ng-show="auf.userId.$touched && auf.userId.$error.required" class="editmsgs">UserId required. Enter a valid email id</span><br>
+                                <span ng-if="!(auf.userId.$dirty || auf.password.$dirty)" ng-bind="adderror" class="error"></span>
+                                <span ng-if="!(auf.userId.$touched || auf.password.$touched) && addSuccess" class="success">Admin added successfully</span>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <a href="#" ng-click="toggleAdminEditor($event)">Reset password<span ng-show="!angular.isUndefined(bShowRPE)&& bShowRPE" class="glyphicon glyphicon-menu-up"></span><span ng-show="angular.isUndefined(bShowRPE) || !bShowRPE" class="glyphicon glyphicon-menu-down"></span>
+                            </a>
+                            <div class="well well-sm" ng-show="!angular.isUndefined(bShowRPE) && bShowRPE">
+                                <form role="form" name="rpf">
+                                    <div class="form-group">
+                                        <a href="#" ng-click="refreshAdminUsers($event)" class="btn btn-info btn-xs">
+                                            <span class="glyphicon glyphicon-refresh"></span> Refresh admin list
+                                        </a>
+                                    </div>
+                                    <div class="form-group">
+                                        <select class="form-control" ng-options="usr.userId for usr in allAdmins" name="userId" ng-model="mUser" required>
+                                            <option value="">Select Admin</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <input type="password" class="form-control" ng-model="mPassword" placeholder="Enter password here" name="password">
+                                    </div>
+                                    <div class="text-center">
+                                        <button type="submit" class="btn btn-default btn-sm" ng-click="modifyAdmin($event)">Reset</button>
+                                    </div>
+                                </form>
+                                <span ng-show="allAdmins.length != 0 && rpf.userId.$touched && rpf.userId.$error.required" class="editmsgs">UserId required. Select a email id</span><br>
+                                <span ng-if="!rpf.userId.$dirty" ng-bind="moderror" class="error"></span>
+                                <span ng-if="!(rpf.userId.$touched || rpf.password.$touched) && modSuccess" class="success">Password changed</span>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+        var app = angular.module('admin',  []);
+        app.config(['$locationProvider', function AppConfig($locationProvider) {
+            $locationProvider.html5Mode({enabled: true, requireBase: false}).hashPrefix('*');
+        }]);
+
+        app.service("AdminSvc", function ($http, $q) {
+            var deferred;
+            this.getAdmins = function () {
+                deferred = $q.defer();
+                return $http({
+                        method : "GET",
+                        url : "@routes.AdminController.getAdminUsers",
+                        headers : {
+                        "Content-Type" : "application/json"
+                        }
+                    })
+                    .then(function (response) {
+                        deferred.resolve(response);
+                        return deferred.promise;
+                    }, function (response) {
+                        deferred.reject(response);
+                        return deferred.promise;
+                    });
+            };
+        });
+
+        app.controller('adminCtrl', function($scope, $http, $location, $window, AdminSvc) {
+            // Initialize the view
+            $scope.adderror="";
+            $scope.moderror="";
+            $scope.conerror = "";
+            $scope.allAdmins=[];
+            $scope.nPassword = "";
+            $scope.mPassword = "";
+            $scope.addSuccess = false;
+            $scope.modSuccess = false;
+
+            $scope.showHome = function(event) {
+                event.preventDefault();
+                $location.path("@routes.HomeController.showHomePage").replace();
+                $window.location.href = $location.absUrl();
+            };
+
+            $scope.addUser  = function(event) {
+                event.preventDefault();
+
+                // validate the add user form
+                if ($scope.auf.userId.$error.required || $scope.auf.userId.$error.email || !($scope.auf.userId.$dirty || $scope.auf.password.$dirty)) {
+                    $scope.auf.userId.$touched = true;
+                    return;
+                }
+
+                $scope.conerror = "";
+                $scope.adderror = "";
+                $scope.addSuccess = false;
+                $http({
+                        method : "POST",
+                        url : "@routes.AdminController.addAdmin",
+                        data : {"userId" : $scope.nUserId, "password" : $scope.nPassword},
+                        headers : {
+                            "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                        $scope.nUserId = "";
+                        $scope.nPassword = "";
+                        $scope.auf.userId.$touched = false;
+                        $scope.auf.password.$touched = false;
+                        $scope.addSuccess = true;
+                    }, function errorCallback(response) {
+                        if (response.status == 400) {
+                            $scope.adderror = response.data.error;
+                            $scope.auf.$setPristine();
+                        } else {
+                            $scope.conerror = "Error trying to add the admin user. Retry.";
+                            $('#conError').modal('show');
+                        }
+                    });
+            };
+
+            $scope.toggleAddAdminEditor = function(event) {
+                event.preventDefault();
+                if(angular.isUndefined($scope.bShowAUE)) {
+                    $scope.bShowAUE = true;
+                    $scope.nUserId = "";
+                    $scope.nPassword = "";
+                } else {
+                    $scope.bShowAUE = !$scope.bShowAUE;
+                }
+            };
+
+            $scope.refreshAdminUsers = function(event){
+                $scope.loadAllAdmins(event);
+                $scope.rpf.userId.$touched = false;
+                $scope.rpf.password.$touched = false;
+                $scope.moderror = "";
+                $scope.modSuccess = false;
+            };
+
+            $scope.loadAllAdmins = function(event) {
+                if (event != null)
+                    event.preventDefault();
+                $scope.conerror = "";
+                $scope.allAdmins=[];
+                AdminSvc.getAdmins().then(function successCallback(response) {
+                        $scope.allAdmins = response.data;
+                    }, function errorCallback(response) {
+                        $scope.conerror = "Error refreshing the list of all admin users. Retry.";
+                        $('#conError').modal('show');
+                    }
+                );
+            };
+
+            $scope.modifyAdmin  = function(event) {
+                event.preventDefault();
+
+                // validate the modify user form
+                if ($scope.rpf.userId.$error.required || !$scope.rpf.userId.$dirty) {
+                    $scope.rpf.userId.$touched = true;
+                    return;
+                }
+
+                $scope.conerror = "";
+                $scope.moderror = "";
+                $scope.modSuccess = false;
+                $http({
+                        method : "PUT",
+                        url : "@routes.AdminController.modifyAdmin",
+                        data : {"userId" : $scope.mUser.userId, "password" : $scope.mPassword},
+                        headers : {
+                            "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                        $scope.mUser = null;
+                        $scope.mPassword = "";
+                        $scope.rpf.userId.$touched = false;
+                        $scope.rpf.password.$touched = false;
+                        $scope.modSuccess = true;
+                    }, function errorCallback(response) {
+                        if (response.status == 400) {
+                            $scope.moderror = response.data.error;
+                            $scope.rpf.$setPristine();
+                        } else {
+                            $scope.conerror = "Error trying to reset the password. Retry.";
+                            $('#conError').modal('show');
+                        }
+                    });
+            };
+
+            $scope.toggleAdminEditor = function(event) {
+                event.preventDefault();
+                if(angular.isUndefined($scope.bShowRPE)) {
+                    $scope.bShowRPE = true;
+                    $scope.loadAllAdmins(null);
+                } else {
+                    $scope.bShowRPE = !$scope.bShowRPE;
+                }
+            };
+        });
+    </script>
+</body>
+</html>

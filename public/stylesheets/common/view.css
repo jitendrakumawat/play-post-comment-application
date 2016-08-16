@@ -1,0 +1,60 @@
+.well {
+    margin-bottom: 5px;
+    background-color: #ffffff;
+}
+.well-lg {
+    padding : 5px;
+    border-color : #909090;
+}
+
+.well-sm {
+    padding : 5px;
+    border-color : #a0a0a0;
+    background-color: #fefefe;
+}
+
+body {
+    background-image: url("/assets/images/bg.gif");
+}
+
+.text-right {
+    margin-top : 2px;
+}
+
+.text-center {
+    margin-bottom : 2px;
+}
+
+.list-group-item {
+    word-wrap: break-word;
+}
+
+.form-group {
+    margin-bottom: 2px;
+}
+
+.editmsgs {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: #ee0000;
+}
+
+.who {
+    color: #00aa00;
+}
+
+.group {
+    color: #00aa00;
+}
+
+.error {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: #ee0000;
+}
+
+.success {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: #00ee00;
+}

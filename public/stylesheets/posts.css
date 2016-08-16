@@ -1,0 +1,48 @@
+h4 {
+    color: #000088;
+}
+
+span {
+    white-space: pre-wrap;
+}
+
+textarea {
+    width : 100%;
+}
+
+.user {
+    color: brown;
+}
+
+.postedby {
+    display: inline-block;
+}
+
+.commentedby {
+    display: inline-block;
+}
+
+.postmsg {
+    border-left: 1px solid;
+    border-color: #ccccff;
+    padding-left: 4px;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.commentmsg {
+    border-left: 1px solid;
+    border-color: #ccccff;
+    padding-left: 4px;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+#poststitle {
+    color: #666666;
+}
+
+#commentstitle {
+     color: #666666;
+     display: inline-block;
+ }

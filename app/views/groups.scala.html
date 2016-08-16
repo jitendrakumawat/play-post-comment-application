@@ -1,0 +1,639 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <link rel="stylesheet" href=@routes.Assets.versioned("stylesheets/common/view.css")>
+    <link rel="stylesheet" href=@routes.Assets.versioned("stylesheets/main.css")>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular-cookies.min.js"></script>
+    <title>SI2Chip Groups</title>
+</head>
+<body ng-app="groups" ng-controller="groupsCtrl">
+<nav class="navbar navbar-inverse">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="#">SI2Chip</a>
+        </div>
+        <ul class="nav navbar-nav navbar-right">
+            <li class="active"><a href="#"> Owned groups </a></li>
+            <li><a href="#" ng-click="showPosts($event)"> Posts </a></li>
+            <li><a href="#" ng-click="signOut($event)"><span class="glyphicon glyphicon-log-out"></span> Sign out </a></li>
+        </ul>
+    </div>
+</nav>
+<div class="container">
+    <div class="row">
+        <div class="col-sm-6 col-sm-offset-3">
+            <div class="modal fade" id="conError" role="dialog">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <span>An error occurred transacting with the server.</span>
+                            <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            {{conerror}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm-6 col-sm-offset-6">
+            <div class="text-right">
+                <span class="who">{{loggedInUser()}}</span><span> Group: </span><span class="group">{{loggedInUserGroup()}}</span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm-3">
+            <div class="well well-lg">
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>
+                            <div class="text-center">
+                                <h4 id="groupsmgmttitle">Manage Owned Groups</h4>
+                            </div>
+                        </th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>
+                            <div class="text-center {{setActive(1)}}">
+                                <a href="#"  ng-click="toggleAddGroupEditor($event)"> Add group </a>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="text-center {{setActive(2)}}">
+                                <a href="#" ng-click="toggleGroupEditor($event)"> Modify group </a>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="text-center {{setActive(3)}}">
+                                <a href="#" ng-click="toggleDelGroupEditor($event)"> Delete group </a>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="col-sm-6">
+            <div class="well well-lg" ng-show="!angular.isUndefined(nEditor) && nEditor == 1">
+                <form role="form" name="agf">
+                    <div class="form-group">
+                        <input type="text" class="form-control" maxlength="255" ng-model="nGroupId" placeholder="Enter group id here" required name="groupId">
+                    </div>
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-default btn-sm" ng-click="addGroup($event)">Add Group</button>
+                    </div>
+                </form>
+                <span ng-show="agf.groupId.$touched && agf.groupId.$error.required" class="editmsgs">Group id required</span><br>
+                <span ng-if="!agf.groupId.$dirty" ng-bind="adderror" class="error"></span>
+                <span ng-if="!agf.groupId.$touched && addSuccess" class="success">Group added successfully</span>
+            </div>
+            <div class="well well-lg" ng-show="!angular.isUndefined(nEditor) && nEditor == 2">
+                <form role="form" name="mgf">
+                    <div class="form-group">
+                        <a href="#" ng-click="refreshMGroups($event)" class="btn btn-info btn-xs">
+                            <span class="glyphicon glyphicon-refresh"></span> Refresh group list
+                        </a>
+                    </div>
+                    <div class="form-group">
+                        <select class="form-control" name="groupId"  ng-change="resetModifyGroupUsersEditor()" ng-model="mGroupId" required>
+                            <option value="">Select group</option>
+                            <option ng-repeat="grp in allMUserGroups track by grp.groupId">{{grp.groupId}}</option>
+                        </select>
+                    </div>
+                </form>
+                <div class="well well-lg" ng-show="!mgf.groupId.$error.required">
+                    <table class="table">
+                        <thead>
+                        <tr>
+                            <th>
+                                <div class="text-center">
+                                    <h5 id="groupusersmgmttitle">Manage users</h5>
+                                </div>
+                            </th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <td>
+                                <div class="text-center">
+                                    <a href="#" ng-click="toggleAddUserEditor($event)">Add user<span ng-show="!angular.isUndefined(bShowAUE)&& bShowAUE" class="glyphicon glyphicon-menu-up"></span><span ng-show="angular.isUndefined(bShowAUE) || !bShowAUE" class="glyphicon glyphicon-menu-down"></span>
+                                    </a>
+                                </div>
+                                <div class="well well-sm" ng-show="!angular.isUndefined(bShowAUE) && bShowAUE">
+                                    <form role="form" name="auf">
+                                        <div class="form-group">
+                                            <a href="#" ng-click="refreshMAUsers($event)" class="btn btn-info btn-xs">
+                                                <span class="glyphicon glyphicon-refresh"></span> Refresh user list
+                                            </a>
+                                        </div>
+                                        <div class="form-group">
+                                            <select class="form-control" name="userId" ng-model="nUserId" required>
+                                                <option value="">Select User</option>
+                                                <option ng-repeat="usr in allMAUsers track by usr.userId">{{usr.userId}}</option>
+                                            </select>
+                                        </div>
+                                        <div class="text-center">
+                                            <button type="submit" class="btn btn-default btn-sm" ng-click="addUser($event)">Add</button>
+                                        </div>
+                                    </form>
+                                    <span ng-show="auf.userId.$error.email" class="editmsgs">Not a valid e-mail address</span><br>
+                                    <span ng-show="allMAUsers.length != 0 && auf.userId.$touched && auf.userId.$error.required" class="editmsgs">UserId required. Select an email id</span><br>
+                                    <span ng-if="!auf.userId.$dirty" ng-bind="addusererror" class="error"></span>
+                                    <span ng-if="!auf.userId.$touched && addUserSuccess" class="success">User added successfully</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="text-center">
+                                    <a href="#" ng-click="toggleDelUserEditor($event)">Delete user<span ng-show="!angular.isUndefined(bShowDUE)&& bShowDUE" class="glyphicon glyphicon-menu-up"></span><span ng-show="angular.isUndefined(bShowDUE) || !bShowDUE" class="glyphicon glyphicon-menu-down"></span>
+                                    </a>
+                                </div>
+                                <div class="well well-sm" ng-show="!angular.isUndefined(bShowDUE) && bShowDUE">
+                                    <form role="form" name="duf">
+                                        <div class="form-group">
+                                            <a href="#" ng-click="refreshMDUsers($event)" class="btn btn-info btn-xs">
+                                                <span class="glyphicon glyphicon-refresh"></span> Refresh group user list
+                                            </a>
+                                        </div>
+                                        <div class="form-group">
+                                            <select class="form-control" name="userId" ng-model="dUserId" required>
+                                                <option value="">Select User</option>
+                                                <option ng-repeat="usr in allMDUsers track by usr.userId">{{usr.userId}}</option>
+                                            </select>
+                                        </div>
+                                        <div class="text-center">
+                                            <button type="submit" class="btn btn-default btn-sm" ng-click="deleteUser($event)">Delete</button>
+                                        </div>
+                                    </form>
+                                    <span ng-show="allMDUsers.length != 0 && duf.userId.$touched && duf.userId.$error.required" class="editmsgs">UserId required. Select an email id</span><br>
+                                    <span ng-if="!duf.userId.$dirty" ng-bind="delusererror" class="error"></span>
+                                    <span ng-if="!duf.userId.$touched && delUserSuccess" class="success">User deleted successfully</span>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+             </div>
+            <div class="well well-lg" ng-show="!angular.isUndefined(nEditor) && nEditor == 3">
+                <form role="form" name="dgf">
+                    <div class="form-group">
+                        <a href="#" ng-click="refreshDGroups($event)" class="btn btn-info btn-xs">
+                            <span class="glyphicon glyphicon-refresh"></span> Refresh group list
+                        </a>
+                    </div>
+                    <div class="form-group">
+                        <select class="form-control" name="groupId" ng-model="dGroupId" required>
+                            <option value="">Select group</option>
+                            <option ng-repeat="grp in allDUserGroups track by grp.groupId">{{grp.groupId}}</option>
+                        </select>
+                    </div>
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-default btn-sm" ng-click="deleteGroup($event)">Delete Group</button>
+                    </div>
+                </form>
+                <span ng-show="allDUserGroups.length != 0 && dgf.groupId.$touched && dgf.groupId.$error.required" class="editmsgs">GroupId required. Select a group id</span><br>
+                <span ng-if="!dgf.groupId.$dirty" ng-bind="delerror" class="error"></span>
+                <span ng-if="!dgf.groupId.$touched && delSuccess" class="success">Group deleted successfully</span>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+        var app = angular.module('groups',  ["ngCookies"]);
+        app.config(['$locationProvider', function AppConfig($locationProvider) {
+            $locationProvider.html5Mode({enabled: true, requireBase: false}).hashPrefix('*');
+        }]);
+
+        app.service("GroupSvc", function ($http, $q) {
+            var deferred;
+            this.getGroups = function () {
+                deferred = $q.defer();
+                return $http({
+                        method : "GET",
+                        url : "@routes.GroupController.getOwnedGroups",
+                        headers : {
+                        "Content-Type" : "application/json"
+                        }
+                    })
+                    .then(function (response) {
+                        deferred.resolve(response);
+                        return deferred.promise;
+                    }, function (response) {
+                        deferred.reject(response);
+                        return deferred.promise;
+                    });
+            };
+        });
+
+        app.controller('groupsCtrl', function($scope, $http, $location, $window, $cookies, GroupSvc) {
+            // initialize the view
+            $scope.adderror="";
+            $scope.delerror="";
+            $scope.conerror = "";
+            $scope.addSuccess = false;
+            $scope.delSuccess = false;
+            $scope.allDUserGroups = [];
+            $scope.allMUserGroups = [];
+            $scope.nEditor = 0; // no editor
+
+            $scope.loggedInUser = function() {
+                return $cookies.get("userId");
+            };
+
+            $scope.loggedInUserGroup = function() {
+                return $cookies.get("groupId");
+            };
+
+            // shows the forbidden page
+            $scope.showForbiddenPage = function() {
+                $cookies.remove("userId");
+                $cookies.remove("groupId");
+                $cookies.remove("tzoffset");
+                $location.path("@routes.HomeController.showForbiddenPage").replace();
+                $window.location.href = $location.absUrl();
+            };
+
+            // goto posts page
+            $scope.showPosts = function(event) {
+                event.preventDefault();
+                $location.path("@routes.PostController.getPosts").replace();
+                $window.location.href = $location.absUrl();
+            };
+
+            // logout and goto home page
+            $scope.signOut = function(event) {
+                event.preventDefault();
+                $cookies.remove("userId");
+                $cookies.remove("groupId");
+                $cookies.remove("tzoffset");
+                $location.path("@routes.HomeController.logout").replace();
+                $window.location.href = $location.absUrl();
+            };
+
+            // highlight the selected group action
+            $scope.setActive = function(nE) {
+                if (nE == $scope.nEditor)
+                    return "selectedaction"; // css class to highlight the selected action
+                else
+                    return "";
+            };
+
+
+            // adds a group
+            $scope.addGroup  = function(event) {
+                event.preventDefault();
+
+                // validate the add group form
+                if ($scope.agf.groupId.$error.required || !$scope.agf.groupId.$dirty) {
+                    $scope.agf.groupId.$touched = true;
+                    return;
+                }
+
+                $scope.conerror = "";
+                $scope.adderror = "";
+                $scope.addSuccess = false;
+                $http({
+                        method : "POST",
+                        url : "@routes.GroupController.addGroup",
+                        data : {"groupId" : $scope.nGroupId},
+                        headers : {
+                            "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                        $scope.nGroupId = "";
+                        $scope.agf.groupId.$touched = false;
+                        $scope.addSuccess = true;
+                    }, function errorCallback(response) {
+                        if (response.status == 400) {
+                            $scope.adderror = response.data.error;
+                            $scope.agf.$setPristine();
+                        } else {
+                            if (response.status == 403)
+                                $scope.showForbiddenPage();
+                            else {
+                                $scope.conerror = "Error trying to add the group. Retry.";
+                                $('#conError').modal('show');
+                            }
+                        }
+                    });
+            };
+
+            // toggles the add group editor
+            $scope.toggleAddGroupEditor = function(event) {
+                event.preventDefault();
+                if($scope.nEditor != 1)
+                    $scope.nEditor = 1;
+                else
+                    $scope.nEditor = 0;
+            };
+
+            // refreshes the groups to delete
+            $scope.refreshDGroups = function(event){
+                if (event != null)
+                    event.preventDefault();
+                $scope.loadAllUserGroups(2);
+                $scope.dGroupId = "";
+                $scope.delerror = "";
+                $scope.dgf.groupId.$touched = false;
+                $scope.delSuccess = false;
+            };
+
+             // toggles the delete group editor
+            $scope.toggleDelGroupEditor = function(event) {
+                event.preventDefault();
+                if($scope.nEditor != 3) {
+                    $scope.nEditor = 3;
+                    if (angular.isUndefined($scope.dGroupId)){
+                        $scope.dGroupId = "";
+                        $scope.loadAllUserGroups(2);
+                    }
+                }
+                else
+                    $scope.nEditor = 0;
+            };
+
+            // deletes a group
+            $scope.deleteGroup  = function(event) {
+                event.preventDefault();
+
+                // validate the delete group form
+                if ($scope.dgf.groupId.$error.required || !$scope.dgf.groupId.$dirty) {
+                    $scope.dgf.groupId.$touched = true;
+                    return;
+                }
+
+                $scope.conerror = "";
+                $scope.delerror = "";
+                $scope.delSuccess = false;
+                $http({
+                        method : "DELETE",
+                        url : "/group/" + $scope.dGroupId,
+                        headers : {
+                            "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                        $scope.dGroupId = "";
+                        $scope.dgf.groupId.$touched = false;
+                        $scope.delSuccess = true;
+                        $scope.loadAllUserGroups(2);
+                    }, function errorCallback(response) {
+                        if (response.status == 400) {
+                            $scope.delerror = response.data.error;
+                            $scope.dgf.$setPristine();
+                        } else {
+                            if (response.status == 403)
+                                $scope.showForbiddenPage();
+                            else {
+                                $scope.conerror = "Error trying to delete the user. Retry.";
+                                $('#conError').modal('show');
+                            }
+                        }
+                    });
+            };
+
+            // loads all the groups which is created by this user
+            $scope.loadAllUserGroups = function(dorm) {
+                $scope.conerror = "";
+                if (dorm == 1)
+                    $scope.allMUserGroups = [];
+                else
+                    $scope.allDUserGroups = [];
+
+                GroupSvc.getGroups().then(function successCallback(response) {
+                        if (dorm == 1)
+                            $scope.allMUserGroups = response.data;
+                        else
+                            $scope.allDUserGroups = response.data;
+                    }, function errorCallback(response) {
+                        if (response.status == 403)
+                            $scope.showForbiddenPage();
+                        else {
+                            $scope.conerror = "Error refreshing the list of owned groups. Retry.";
+                            $('#conError').modal('show');
+                        }
+                    }
+                );
+            };
+
+            // adds the user to the modified group
+            $scope.addUser  = function(event) {
+                event.preventDefault();
+
+                // validate the add user form
+                if ($scope.auf.userId.$error.required || $scope.auf.userId.$error.email || !$scope.auf.userId.$dirty) {
+                    $scope.auf.userId.$touched = true;
+                    return;
+                }
+
+                $scope.conerror = "";
+                $scope.addusererror = "";
+                $scope.addUserSuccess = false;
+                $http({
+                        method : "POST",
+                        url : "@routes.GroupController.addUserToGroup",
+                        data : {"userId" : $scope.nUserId, "groupId" : $scope.mGroupId},
+                        headers : {
+                            "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                        $scope.nUserId = "";
+                        $scope.auf.userId.$touched = false;
+                        $scope.addUserSuccess = true;
+                    }, function errorCallback(response) {
+                        if (response.status == 400) {
+                            $scope.addusererror = response.data.error;
+                            $scope.auf.$setPristine();
+                        } else {
+                            if (response.status == 403)
+                                $scope.showForbiddenPage();
+                            else {
+                                $scope.conerror = "Error trying to add the user. Retry.";
+                                $('#conError').modal('show');
+                            }
+                        }
+                    });
+            };
+
+            $scope.loadAllUsers = function() {
+                $scope.conerror = "";
+                $scope.allMAUsers = [];
+                $http({
+                        method : "GET",
+                        url : "@routes.GroupController.getUsers",
+                        headers : {
+                        "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                            $scope.allMAUsers = response.data;
+                    }, function errorCallback(response) {
+                        if (response.status == 403)
+                            $scope.showForbiddenPage();
+                        else {
+                            $scope.conerror = "Error refreshing the list of all users. Retry.";
+                            $('#conError').modal('show');
+                        }
+                    }
+                );
+            };
+
+            $scope.refreshMAUsers = function(event) {
+                if (event != null)
+                    event.preventDefault();
+                if (!angular.isUndefined($scope.mGroupId) && $scope.mGroupId != "")
+                    $scope.loadAllUsers();
+                else
+                    $scope.allMAUsers = [];
+                $scope.nUserId = "";
+                $scope.addusererror = "";
+                $scope.auf.userId.$touched = false;
+                $scope.addUserSuccess = false;
+            };
+
+            $scope.toggleAddUserEditor = function(event) {
+                event.preventDefault();
+                $scope.bShowAUE = !$scope.bShowAUE;
+            };
+
+            $scope.hideAddUserEditor = function() {
+                $scope.bShowAUE = false;
+                $scope.refreshMAUsers();
+            };
+
+            $scope.deleteUser  = function(event) {
+                event.preventDefault();
+
+                // validate the delete user form
+                if ($scope.duf.userId.$error.required || !$scope.duf.userId.$dirty) {
+                    $scope.duf.userId.$touched = true;
+                    return;
+                }
+
+                $scope.conerror = "";
+                $scope.delusererror = "";
+                $scope.delUserSuccess = false;
+                $http({
+                        method : "DELETE",
+                        url : "groupuser/" + $scope.mGroupId + "/" + $scope.dUserId,
+                        headers : {
+                            "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                        $scope.dUserId = "";
+                        $scope.duf.userId.$touched = false;
+                        $scope.delUserSuccess = true;
+                        $scope.loadAllGroupUsers();
+                    }, function errorCallback(response) {
+                        if (response.status == 400) {
+                            $scope.delusererror = response.data.error;
+                            $scope.duf.$setPristine();
+                        } else {
+                            if (response.status == 403)
+                                $scope.showForbiddenPage();
+                            else {
+                                $scope.conerror = "Error trying to delete the user. Retry.";
+                                $('#conError').modal('show');
+                            }
+                        }
+                    });
+            };
+
+            $scope.loadAllGroupUsers = function() {
+                $scope.conerror = "";
+                $scope.allMDUsers = [];
+                $http({
+                        method : "GET",
+                        url : "/groupusers" + "/" + $scope.mGroupId,
+                        headers : {
+                        "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                            $scope.allMDUsers = response.data;
+                    }, function errorCallback(response) {
+                        if (response.status == 403)
+                            $scope.showForbiddenPage();
+                        else {
+                            if (response.status == 400)
+                                $scope.conerror = response.data.error;
+                            else
+                                $scope.conerror = "Error refreshing the list of all group users. Retry.";
+                            $('#conError').modal('show');
+                        }
+                    }
+                );
+            };
+
+            $scope.refreshMDUsers = function(event) {
+                if (event != null)
+                    event.preventDefault();
+                if (!angular.isUndefined($scope.mGroupId) && $scope.mGroupId != "")
+                    $scope.loadAllGroupUsers();
+                else
+                    $scope.allMDUsers = [];
+                $scope.dUserId = "";
+                $scope.delusererror = "";
+                $scope.duf.userId.$touched = false;
+                $scope.delUserSuccess = false;
+            };
+
+            $scope.toggleDelUserEditor = function(event) {
+                event.preventDefault();
+                $scope.bShowDUE = !$scope.bShowDUE;
+            };
+
+            $scope.hideDelUserEditor = function() {
+                $scope.bShowDUE = false;
+                $scope.refreshMDUsers(null);
+            };
+
+            // resets the group user modification editor
+            $scope.resetModifyGroupUsersEditor = function() {
+                $scope.hideAddUserEditor();
+                $scope.hideDelUserEditor();
+            };
+
+            // refreshes the groups to modify
+            $scope.refreshMGroups = function(event){
+                if (event != null)
+                    event.preventDefault();
+                $scope.loadAllUserGroups(1);
+                $scope.mGroupId = "";
+                $scope.mgf.groupId.$touched = false;
+            };
+
+            // toggles the delete group editor
+            $scope.toggleGroupEditor = function(event) {
+                event.preventDefault();
+                if($scope.nEditor != 2) {
+                    $scope.nEditor = 2;
+                    if(angular.isUndefined($scope.mGroupId)) {
+                        $scope.mGroupId = "";
+                        $scope.loadAllUserGroups(1);
+                    }
+                }
+                else
+                    $scope.nEditor = 0;
+            };
+
+        });
+    </script>
+</body>
+</html>

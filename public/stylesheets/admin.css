@@ -1,0 +1,23 @@
+#adminmgmttitle {
+    display : inline-block;
+    white-space: pre-wrap;
+    color: #666666;
+    text-align: center;
+}
+
+#summarytitle {
+    display : inline-block;
+    white-space: pre-wrap;
+    color:  #666666;
+    text-align: center;
+}
+
+#poststitle {
+    color: #666666;
+}
+
+#commentstitle {
+     color: #666666;
+ }
+
+

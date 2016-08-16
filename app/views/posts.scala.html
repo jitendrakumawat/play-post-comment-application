@@ -1,0 +1,495 @@
+@(isAdmin : java.lang.Boolean)
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <link rel="stylesheet" href=@routes.Assets.versioned("stylesheets/common/view.css")>
+    <link rel="stylesheet" href=@routes.Assets.versioned("stylesheets/posts.css")>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular-cookies.min.js"></script>
+    <title>SI2 Posts</title>
+</head>
+<body ng-app="posts" ng-controller="postsCtrl">
+    <nav class="navbar navbar-inverse">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="#">SI2Chip</a>
+            </div>
+
+            <ul class="nav navbar-nav navbar-right">
+                <li class="active"><a href="#"> Posts </a></li>
+                @if(isAdmin) {
+                    <li><a href="#" ng-click="showAdminPage($event)"><span class="glyphicon glyphicon-bishop"></span> Admin </a></li>
+                }
+                <li><a href="#" ng-click="showGroupsPage($event)"> Owned Groups </a></li>
+                <li><a href="#" ng-click="signOut($event)"><span class="glyphicon glyphicon-log-out"></span> Sign out </a></li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container">
+        <div class="row">
+            <div class="modal fade" id="conError" role="dialog">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <span>An error occurred transacting with the server.</span>
+                            <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            {{conerror}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="row">
+            <div class="col-sm-6 col-sm-offset-6">
+                <div class="text-right">
+                    <span class="who">{{loggedInUser()}}</span><span> Group: </span><span class="group">{{loggedInUserGroup()}}</span>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-6 col-sm-offset-3">
+                <div class="well well-lg">
+                    <h4 id="poststitle">Posts <span class="badge">{{postpage.numPosts}}</span></h4>
+                    <form name="apf" role="form">
+                        <div class="form-group">
+                            <textarea name="post" ng-model="post" class="form-control" maxlength="500" required placeholder="Enter your post here"></textarea>
+                        </div>
+                        <div class="text-right">
+                            <button type="submit" ng-click="addPost($event)" class="btn btn-primary btn-xs">Post</button>
+                        </div>
+                    </form>
+                    <div id="addError"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="row">
+            <div class="col-sm-6 col-sm-offset-3">
+                <div class="well well-lg">
+                    <div class="text-center">
+                        <a href="#" ng-click="loadNextPage($event)" class="btn btn-info btn-xs">
+                            <span class="glyphicon glyphicon-circle-arrow-up"></span>
+                        </a>
+                        <a href="#" ng-if="postpage.endId != '-1'" ng-click="refreshCurrentPage($event)" class="btn btn-info btn-xs">
+                            <span class="glyphicon glyphicon-refresh"></span>
+                        </a>
+                        <a href="#" ng-if="!postpage.bLastPage" ng-click="loadPreviousPage($event)" class="btn btn-info btn-xs">
+                            <span class="glyphicon glyphicon-circle-arrow-down"></span>
+                        </a>
+                    </div>
+                    <div id="delError"></div>
+                    <div class="well well-lg" ng-repeat="pst in postpage.arr track by pst.id">
+                        <div class="text-right">
+                            <h6 class="postedby"><span class="user">{{pst.userId}}</span> on {{pst.postedOn}}</h6>
+                            <a href="#" ng-click="deletePost($event,pst.id)" class="btn btn-info btn-xs">
+                                <span class="glyphicon glyphicon-remove"></span>
+                            </a>
+                        </div>
+                        <div class="postmsg"><span>{{pst.post}}</span></div>
+                        <div class="text-right">
+                            <a href="#" ng-click="toggleCommentsEditor($event, $index)">Comments<span ng-show="!angular.isUndefined(postpage.arr[$index].bShow) && postpage.arr[$index].bShow" class="glyphicon glyphicon-menu-up"></span><span ng-show="angular.isUndefined(postpage.arr[$index].bShow) || !postpage.arr[$index].bShow" class="glyphicon glyphicon-menu-down"></span>
+                            </a>
+                        </div>
+                        <div class="well well-sm" ng-show="!angular.isUndefined(postpage.arr[$index].bShow) && postpage.arr[$index].bShow">
+                            <div class="modal fade" id="{{postpage.arr[$index].id}}" role="dialog">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <span>An error occurred transacting with the server.</span>
+                                            <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                        </div>
+                                        <div class="modal-body">
+                                            {{postpage.arr[$index].cconerror}}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="delError{{postpage.arr[$index].id}}"></div>
+                            <table class="table">
+                                <thead>
+                                <tr>
+                                    <div class="text-center">
+                                        <h4 id="commentstitle">Comments <span class="badge">{{postpage.arr[$index].commentpage.numComments}}</span></h4>
+                                        <a href="#" ng-click="loadCommentNextPage($event, $index)" class="btn btn-success btn-xs">
+                                            <span class="glyphicon glyphicon-circle-arrow-down"></span>
+                                        </a>
+                                        <a href="#" ng-if="postpage.arr[$index].commentpage.beginId != '-1'" ng-click="refreshCommentCurrentPage($event, $index)" class="btn btn-success btn-xs">
+                                            <span class="glyphicon glyphicon-refresh"></span>
+                                        </a>
+                                        <a href="#" ng-if="!postpage.arr[$index].commentpage.bLastPage" ng-click="loadCommentPreviousPage($event, $index)" class="btn btn-success btn-xs">
+                                            <span class="glyphicon glyphicon-circle-arrow-up"></span>
+                                        </a>
+                                    </div>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr ng-repeat="comment in postpage.arr[$index].commentpage.arr track by comment.id">
+                                    <td>
+                                        <div class="text-right">
+                                            <h6 class="commentedby"><span class="user">{{comment.userId}}</span> on {{comment.commentedOn}}</h6>
+                                            <a href="#" ng-click="deleteComment($event,$parent.$index,comment.id)" class="btn btn-success btn-xs">
+                                                <span class="glyphicon glyphicon-remove"></span>
+                                            </a>
+                                        </div>
+                                        <div class="commentmsg">{{comment.comment}}</div>
+                                    <td>
+                                </tr>
+                                </tbody>
+                            </table>
+                            <form role="form">
+                                <div class="form-group">
+                                    <textarea id="comment{{postpage.arr[$index].id}}" ng-model="postpage.arr[$index].comment" maxlength="500" class="form-control" required placeholder="Enter your comment here"></textarea>
+                                </div>
+                                <div class="text-right">
+                                    <button type="submit" ng-click="addComment($event, $index)" class="btn btn-success btn-xs">Comment</button>
+                                </div>
+                            </form>
+                            <div id="addError{{postpage.arr[$index].id}}"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+<script type="text/javascript">
+        //todo: progress indicator
+        //todo: error message timing
+
+        var app = angular.module('posts',  ["ngCookies"]);
+        app.config(['$locationProvider', function AppConfig($locationProvider) {
+            $locationProvider.html5Mode({enabled: true, requireBase: false}).hashPrefix('*');
+        }]);
+
+        app.controller('postsCtrl', function($scope, $http, $location, $cookies, $window) {
+
+            $scope.loggedInUser = function() {
+                return $cookies.get("userId");
+            };
+
+            $scope.loggedInUserGroup = function() {
+                return $cookies.get("groupId");
+            };
+
+            $scope.showForbiddenPage = function() {
+                $cookies.remove("userId");
+                $cookies.remove("groupId");
+                $cookies.remove("tzoffset");
+                $location.path("@routes.HomeController.showForbiddenPage").replace();
+                $window.location.href = $location.absUrl();
+            };
+
+            $scope.signOut = function(event) {
+                event.preventDefault();
+                $cookies.remove("userId");
+                $cookies.remove("groupId");
+                $cookies.remove("tzoffset");
+                $location.path("@routes.HomeController.logout").replace();
+                $window.location.href = $location.absUrl();
+            };
+
+            $scope.showAdminPage = function(event) {
+                event.preventDefault();
+                $location.path("@routes.AdminController.showAdminPage").replace();
+                $window.location.href = $location.absUrl();
+            };
+
+            $scope.showGroupsPage = function(event) {
+                event.preventDefault();
+                $location.path("@routes.GroupController.showGroupsPage").replace();
+                $window.location.href = $location.absUrl();
+            };
+
+            // add post event handler
+            $scope.addPost = function(event) {
+                event.preventDefault();
+
+                // validate the posts form
+                if ($scope.apf.post.$error.required) {
+                    return;
+                }
+
+                // post the message
+                $scope.conerror = "";
+                $scope.adderror = "";
+                $("#addError").html("");
+                $http({
+                        method : "POST",
+                        url : "@routes.PostController.addPost",
+                        data : {"post" : $scope.post},
+                        headers : {
+                            "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                        $scope.post = "";
+                        $scope.loadFirstPage();
+                    }, function errorCallback(response) {
+                        if (response.status == 400) {
+                            $scope.adderror = response.data.error;
+                            $("#addError").html("<div id='aErr' class='alert alert-danger'><a class='close' data-dismiss='alert'>&times;</a>" + $scope.adderror + "</div>");
+                        } else {
+                            if (response.status == 403)
+                                $scope.showForbiddenPage();
+                            else {
+                                $scope.conerror = "Error posting the message. Retry";
+                                $('#conError').modal('show');
+                            }
+                        }
+                    });
+            };
+
+            // delete post event handler
+            $scope.deletePost = function(event, postId) {
+                event.preventDefault();
+
+                // delete the post
+                $scope.conerror = "";
+                $scope.delerror = "";
+                $("#delError").html("");
+                $http({
+                        method : "DELETE",
+                        url : "/post/" + postId,
+                        headers : {
+                            "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                        $scope.refreshCurrentPage(null);
+                    }, function errorCallback(response) {
+                        if (response.status == 400) {
+                            $scope.delerror = response.data.error + ". Refresh the current page if post does not exist.";
+                            $("#delError").html("<div id='dErr' class='alert alert-danger'><a class='close' data-dismiss='alert'>&times;</a>" + $scope.delerror + "</div>");
+                        } else {
+                            if (response.status == 403)
+                                $scope.showForbiddenPage();
+                            else {
+                                $scope.conerror = "Error deleting the message. Retry.";
+                                $('#conError').modal('show');
+                            }
+                        }
+                    });
+            };
+
+            // page loader
+            $scope.loadPage = function(url) {
+                $scope.delerror = "";
+                $("#delError").html("");
+                $scope.conerror = "";
+                $http({
+                        method : "GET",
+                        url : url,
+                        headers : {
+                            "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                        $scope.postpage = response.data;
+                    }, function errorCallback(response) {
+                         if (response.status == 403)
+                            $scope.showForbiddenPage();
+                         else {
+                            $scope.conerror = "Error retrieving the page from the server. Retry.";
+                            $('#conError').modal('show');
+                         }
+                    });
+            };
+
+            // refreshes the current page
+            $scope.refreshCurrentPage = function(event) {
+                if (event != null)
+                    event.preventDefault();
+                $scope.loadPage("/posts/refresh/" + $scope.postpage.endId);
+            };
+
+            // next page event handler
+            $scope.loadNextPage = function(event) {
+                event.preventDefault();
+                $scope.loadPage("/posts/after/" + $scope.postpage.beginId);
+            };
+
+            // previous page event handler
+            $scope.loadPreviousPage = function(event) {
+                event.preventDefault();
+                $scope.loadPage("/posts/before/" + $scope.postpage.endId);
+            };
+
+            // loads the first page
+            $scope.loadFirstPage = function() {
+                $scope.postpage.numPosts = "0";
+                $scope.postpage.bLastPage = false;
+                $scope.postpage.arr = [];
+                $scope.postpage.beginId = "-1";
+                $scope.postpage.endId = "-1";
+                $scope.loadPage("/posts/first");
+            };
+
+            // add comment event handler
+            $scope.addComment = function(event, index) {
+                event.preventDefault();
+
+                // validate the comments form
+                if ($scope.postpage.arr[index].comment == "") {
+                    return;
+                }
+
+                // add the comment
+                $scope.postpage.arr[index].cconerror = "";
+                $scope.postpage.arr[index].cadderror = "";
+                $("#addError" + $scope.postpage.arr[index].id).html("");
+                $http({
+                        method : "POST",
+                        url : "/comment/" + $scope.postpage.arr[index].id,
+                        data : {"comment" : $scope.postpage.arr[index].comment},
+                        headers : {
+                            "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                        $scope.postpage.arr[index].comment = "";
+                        $scope.loadCommentLastPage(null, index);
+                    }, function errorCallback(response) {
+                        if (response.status == 400) {
+                            $scope.postpage.arr[index].cadderror = response.data.error;
+                            $("#addError" + $scope.postpage.arr[index].id).html("<div id='aErr" + $scope.postpage.arr[index].id + "' class='alert alert-danger'><a class='close' data-dismiss='alert'>&times;</a>" + $scope.postpage.arr[index].cadderror + "</div>");
+                        } else {
+                            if (response.status == 403)
+                               $scope.showForbiddenPage();
+                            else {
+                                $scope.postpage.arr[index].cconerror = "Error posting the comment. Retry";
+                                $('#' + $scope.postpage.arr[index].id).modal('show');
+                            }
+                        }
+                    });
+            };
+
+            // delete comment event handler
+            $scope.deleteComment = function(event, index, commentId) {
+                event.preventDefault();
+
+                // delete the comment
+                $scope.postpage.arr[index].cconerror = "";
+                $scope.postpage.arr[index].cdelerror = "";
+                $("#delError" + $scope.postpage.arr[index].id).html("");
+                $http({
+                        method : "DELETE",
+                        url : "/comment/" + $scope.postpage.arr[index].id + "/" + commentId,
+                        headers : {
+                            "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                        $scope.refreshCommentCurrentPage(null, index);
+                    }, function errorCallback(response) {
+                        if (response.status == 400) {
+                            $scope.postpage.arr[index].cdelerror = response.data.error + ". Refresh the current comment page if comment does not exist.";
+                            $("#delError" + $scope.postpage.arr[index].id).html("<div id='dErr" + $scope.postpage.arr[index].id + "' class='alert alert-danger'><a class='close' data-dismiss='alert'>&times;</a>" + $scope.postpage.arr[index].cdelerror + "</div>");
+                        } else {
+                             if (response.status == 403)
+                                $scope.showForbiddenPage();
+                             else {
+                                $scope.postpage.arr[index].cconerror = "Error deleting the comment. Retry.";
+                                $('#' + $scope.postpage.arr[index].id).modal('show');
+                             }
+                        }
+                    });
+            };
+
+            // comment page loader
+            $scope.loadCommentPage = function(url, index) {
+                $scope.postpage.arr[index].cdelerror = "";
+                $("#delError" + $scope.postpage.arr[index].id).html("");
+                $scope.postpage.arr[index].cconerror = "";
+                $http({
+                        method : "GET",
+                        url : url,
+                        headers : {
+                            "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                        $scope.postpage.arr[index].commentpage = response.data;
+                    }, function errorCallback(response) {
+                        if (response.status == 403)
+                            $scope.showForbiddenPage();
+                        else {
+                            $scope.postpage.arr[index].cconerror = "Error retrieving the comment page from the server. Retry.";
+                            $('#' + $scope.postpage.arr[index].id).modal('show');
+                        }
+                    });
+            };
+
+            // refreshes the current comment page
+            $scope.refreshCommentCurrentPage = function(event, index) {
+                if (event != null)
+                    event.preventDefault();
+                $scope.loadCommentPage("/comments/refresh/" + $scope.postpage.arr[index].id + "/" + $scope.postpage.arr[index].commentpage.beginId, index);
+            };
+
+            // next comment page event handler
+            $scope.loadCommentNextPage = function(event, index) {
+                event.preventDefault();
+                $scope.loadCommentPage("/comments/after/" + $scope.postpage.arr[index].id + "/" + $scope.postpage.arr[index].commentpage.endId, index);
+            };
+
+            // previous comment page event handler
+            $scope.loadCommentPreviousPage = function(event, index) {
+                event.preventDefault();
+                $scope.loadCommentPage("/comments/before/" + $scope.postpage.arr[index].id + "/" + $scope.postpage.arr[index].commentpage.beginId, index);
+            };
+
+            $scope.loadCommentLastPage = function(event, index) {
+                if (event != null)
+                    event.preventDefault();
+                $scope.loadCommentPage("/comments/last/" + $scope.postpage.arr[index].id, index);
+            };
+
+
+            // loads the first comment page
+            $scope.loadCommentFirstPage = function(index) {
+                $scope.postpage.arr[index].commentpage.numComments = "0";
+                $scope.postpage.arr[index].commentpage.bLastPage = false;
+                $scope.postpage.arr[index].commentpage.arr = [];
+                $scope.postpage.arr[index].commentpage.beginId = "-1";
+                $scope.postpage.arr[index].commentpage.endId = "-1";
+
+                $scope.loadCommentPage("/comments/first/" + $scope.postpage.arr[index].id, index);
+            };
+
+            // toggles the comment editor for a post
+            $scope.toggleCommentsEditor = function(event, index) {
+                event.preventDefault();
+                if(angular.isUndefined($scope.postpage.arr[index].bShow)) {
+                    $scope.postpage.arr[index].commentpage = new Object();
+
+                    // initialize error state
+                    $scope.postpage.arr[index].cdelerror = "";
+                    $scope.postpage.arr[index].cconerror = "";
+                    $scope.postpage.arr[index].cadderror = "";
+
+                    $scope.postpage.arr[index].comment = "";
+                    $scope.postpage.arr[index].bShow = true;
+                    $scope.loadCommentFirstPage(index);
+                } else {
+                    $scope.postpage.arr[index].bShow = !$scope.postpage.arr[index].bShow;
+                }
+            };
+
+            // Initialize the view
+            $scope.adderror = "";
+            $scope.delerror = "";
+            $scope.conerror = "";
+            $scope.postpage = new Object();
+            $scope.loadFirstPage();
+        });
+
+</script>
+
+</html>

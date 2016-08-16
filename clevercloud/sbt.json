@@ -1,0 +1,5 @@
+{
+  "deploy":{
+    "goal": "-Dplay.version=2.5.3"
+  }
+}

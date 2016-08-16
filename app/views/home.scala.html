@@ -1,0 +1,218 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <link rel="stylesheet" href=@routes.Assets.versioned("stylesheets/common/view.css")>
+    <link rel="stylesheet" href=@routes.Assets.versioned("stylesheets/main.css")>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular-cookies.min.js"></script>
+
+    <title>SI2Chip Home</title>
+</head>
+<body>
+    <nav class="navbar navbar-inverse">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="#">SI2Chip</a>
+            </div>
+            <ul class="nav navbar-nav navbar-right">
+                <li><a href="#" class="active"><span class="glyphicon glyphicon-home"></span> Home </a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container" ng-app="login" ng-controller="loginCtrl">
+        <div class="row">
+            <div class="col-sm-6 col-sm-offset-3">
+                <div class="modal fade" id="conError" role="dialog">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <span>An error occurred transacting with the server.</span>
+                                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                            </div>
+                            <div class="modal-body">
+                                {{conerror}}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-4">
+                <div class="well well-lg">
+                    <div class="text-center">
+                        <h4 id="summarytitle">Active users <span class="badge">{{users.length}}</span></h4>
+                        <a href="#" ng-click="loadUserSummary()" class="btn btn-info btn-xs">
+                        <span class="glyphicon glyphicon-refresh"></span>
+                    </a>
+                    </div>
+                    <ul class="list-group">
+                        <li ng-repeat="x in users" class="list-group-item list-group-item-success" data-toggle="tooltip" data-placement="right" title="{{x.userId}}">
+                           {{x.userId}}<span class="badge">{{x.nSessions}}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="well well-lg">
+                    <div class="text-center">
+                        <h4 id="logintitle">Login</h4>
+                    </div>
+                    <form role="form" name="lf">
+                        <div class="form-group">
+                            <input type="email" class="form-control" ng-change="loadUserGroups($event)" maxlength="255" ng-model="userId" placeholder="Enter your email id here" required name="userId">
+                        </div>
+                        <div class="form-group">
+                            <input type="password" class="form-control" ng-model="password" placeholder="Enter your password here" name="password">
+                        </div>
+                        <div class="form-group">
+                            <select class="form-control" name="groupId"  ng-model="groupId">
+                                <option value="">Select group</option>
+                                <option ng-repeat="grp in allUserGroups track by grp.groupId">{{grp.groupId}}</option>
+                            </select>
+                        </div>
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-default btn-sm" ng-click="submit($event)">Login</button>
+                        </div>
+                    </form>
+                    <span ng-show="lf.userId.$error.email" class="editmsgs">Not a valid e-mail address</span><br>
+                    <span ng-show="lf.userId.$touched && lf.userId.$error.required" class="editmsgs">UserId required. Enter a valid email id</span><br>
+                    <span ng-if="!(lf.userId.$dirty || lf.password.$dirty)" ng-bind="error" class="error"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //todo: progress indicator
+
+        var app = angular.module('login',  ['ngCookies']);
+        app.config(['$locationProvider', function AppConfig($locationProvider) {
+            $locationProvider.html5Mode({enabled: true, requireBase: false}).hashPrefix('*');
+        }]);
+
+        app.service("GroupSvc", function ($http, $q) {
+            var deferred;
+            this.getMyGroups = function (uId) {
+                deferred = $q.defer();
+                return $http({
+                        method : "GET",
+                        url : "/mygroups/" + uId,
+                        headers : {
+                        "Content-Type" : "application/json"
+                        }
+                    })
+                    .then(function (response) {
+                        deferred.resolve(response);
+                        return deferred.promise;
+                    }, function (response) {
+                        deferred.reject(response);
+                        return deferred.promise;
+                    });
+            };
+        });
+
+        app.controller('loginCtrl', function($scope, $http, $location, $window, $cookies, GroupSvc) {
+            // Initialize the view
+            $scope.error="";
+            $scope.conerror = "";
+            $scope.bConerror = false;
+            $scope.users=[];
+            $scope.allUserGroups = [];
+            $scope.groupId = "";
+            $scope.userId = "";
+
+            $scope.loadUserSummary = function() {
+                $scope.conerror = "";
+                $scope.bConerror = false;
+                $scope.users=[];
+                $http({
+                        method : "GET",
+                        url : "@routes.HomeController.getUserSummary",
+                        headers : {
+                            "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                        $scope.users = response.data;
+                    }, function errorCallback(response) {
+                        $scope.bConerror = true;
+                        $scope.conerror = "Error refreshing the user summary. Retry.";
+                        $('#conError').modal('show');
+                    });
+            };
+            $scope.loadUserSummary();
+
+            // loads all the groups in which this user is a member
+            $scope.loadUserGroups = function(event) {
+                //if (lf.userId.$error.required || lf.userId.$error.email)
+                   // return;
+
+                $scope.conerror = "";
+                $scope.allUserGroups = [];
+                GroupSvc.getMyGroups($scope.userId).then(function successCallback(response) {
+                        $scope.allUserGroups = response.data;
+                    }, function errorCallback(response) {
+                        if (response.status == 400) {
+                            //do nothing
+                        } else if (response.status == 403)
+                            $scope.showForbiddenPage();
+                        else {
+                            $scope.conerror = "Error refreshing the list of groups in which the user is a member. Retry.";
+                            $('#conError').modal('show');
+                        }
+                    }
+                );
+            };
+
+            $scope.submit  = function(event) {
+                var gId = "None";
+                event.preventDefault();
+
+                // validate the login form
+                if ($scope.lf.userId.$error.required || $scope.lf.userId.$error.email || !($scope.lf.userId.$dirty || $scope.lf.password.$dirty)) {
+                    $scope.lf.userId.$touched = true;
+                    return;
+                }
+                // set user cookies
+                $cookies.put("tzoffset", new Date().getTimezoneOffset().toString());
+                $cookies.put("userId", $scope.userId);
+                if ($scope.groupId != "")
+                    gId = $scope.groupId;
+                $cookies.put("groupId", gId);
+
+                $scope.conerror = "";
+                $scope.bConerror = false;
+                $http({
+                        method : "POST",
+                        url : "@routes.HomeController.login",
+                        data : {"userId" : $scope.userId, "groupId" : $scope.groupId, "password" : $scope.password},
+                        headers : {
+                            "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                        $location.path("@routes.PostController.getPosts").replace();
+                        $window.location.href = $location.absUrl();
+                    }, function errorCallback(response) {
+                        $cookies.remove("userId");
+                        $cookies.remove("groupId");
+                        $cookies.remove("tzoffset");
+                        if (response.status == 400) {
+                            $scope.error = response.data.error;
+                            $scope.lf.$setPristine();
+                        } else {
+                            $scope.bConerror = true;
+                            $scope.conerror = "Error trying to login. Retry.";
+                            $('#conError').modal('show');
+                        }
+                    });
+            };
+        });
+    </script>
+</body>
+</html>

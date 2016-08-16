@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <link rel="stylesheet" href=@routes.Assets.versioned("stylesheets/common/view.css")>
+    <link rel="stylesheet" href=@routes.Assets.versioned("stylesheets/admin.css")>
+    <link rel="stylesheet" href=@routes.Assets.versioned("stylesheets/posts.css")>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular-cookies.min.js"></script>
+    <title>SI2Chip Admin</title>
+</head>
+<body ng-app="admin" ng-controller="adminCtrl">
+    <nav class="navbar navbar-inverse">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="#">SI2Chip</a>
+            </div>
+            <ul class="nav navbar-nav navbar-right">
+                <li class="active"><a href="#"> Admin </a></li>
+                <li><a href="#" ng-click="showPosts($event)"> Posts </a></li>
+                <li><a href="#" ng-click="signOut($event)"><span class="glyphicon glyphicon-log-out"></span> Sign out </a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-sm-6 col-sm-offset-6">
+                <div class="text-right">
+                    <span class="who">{{loggedInUser()}}</span><span> Group: </span><span class="group">{{loggedInUserGroup()}}</span>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-6 col-sm-offset-3">
+                <div class="modal fade" id="conError" role="dialog">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <span>An error occurred transacting with the server.</span>
+                                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                            </div>
+                            <div class="modal-body">
+                                {{conerror}}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-4">
+                <div class="well well-lg">
+                    <div class="text-center">
+                        <h4 id="summarytitle">Active users <span class="badge">{{users.length}}</span></h4>
+                        <a href="#" ng-click="loadUserSummary()" class="btn btn-info btn-xs">
+                            <span class="glyphicon glyphicon-refresh"></span>
+                        </a>
+                    </div>
+                    <ul class="list-group">
+                        <li ng-repeat="x in users" class="list-group-item list-group-item-success" data-toggle="tooltip" data-placement="right" title="{{x.userId}}">
+                            {{x.userId}}<span class="badge">{{x.nSessions}}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="well well-lg">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <div class="text-center">
+                                    <h4 id="adminmgmttitle">User management</h4>
+                                </div>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div class="text-center">
+                                        <a href="#" ng-click="toggleAddUserEditor($event)">Add user<span ng-show="!angular.isUndefined(bShowAUE)&& bShowAUE" class="glyphicon glyphicon-menu-up"></span><span ng-show="angular.isUndefined(bShowAUE) || !bShowAUE" class="glyphicon glyphicon-menu-down"></span>
+                                        </a>
+                                    </div>
+                                    <div class="well well-sm" ng-show="!angular.isUndefined(bShowAUE) && bShowAUE">
+                                        <form role="form" name="auf">
+                                            <div class="form-group">
+                                                <input type="email" class="form-control" maxlength="255" ng-model="nUserId" placeholder="Enter email id here" required name="userId">
+                                            </div>
+                                            <div class="form-group">
+                                                <input type="password" class="form-control" ng-model="nPassword" placeholder="Enter password here" name="password">
+                                            </div>
+                                            <div class="text-center">
+                                                <button type="submit" class="btn btn-default btn-sm" ng-click="addUser($event)">Add</button>
+                                            </div>
+                                        </form>
+                                        <span ng-show="auf.userId.$error.email" class="editmsgs">Not a valid e-mail address</span><br>
+                                        <span ng-show="auf.userId.$touched && auf.userId.$error.required" class="editmsgs">UserId required. Enter a valid email id</span><br>
+                                        <span ng-if="!(auf.userId.$dirty || auf.password.$dirty)" ng-bind="adderror" class="error"></span>
+                                        <span ng-if="!(auf.userId.$touched || auf.password.$touched) && addSuccess" class="success">User added successfully</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="text-center">
+                                        <a href="#" ng-click="toggleDelUserEditor($event)">Delete user<span ng-show="!angular.isUndefined(bShowDUE)&& bShowDUE" class="glyphicon glyphicon-menu-up"></span><span ng-show="angular.isUndefined(bShowDUE) || !bShowDUE" class="glyphicon glyphicon-menu-down"></span>
+                                        </a>
+                                    </div>
+                                    <div class="well well-sm" ng-show="!angular.isUndefined(bShowDUE) && bShowDUE">
+                                        <form role="form" name="duf">
+                                            <div class="form-group">
+                                                <a href="#" ng-click="refreshDUsers($event)" class="btn btn-info btn-xs">
+                                                    <span class="glyphicon glyphicon-refresh"></span> Refresh user list
+                                                </a>
+                                            </div>
+                                            <div class="form-group">
+                                                <select class="form-control" name="userId" ng-model="dUserId" required>
+                                                    <option value="">Select User</option>
+                                                    <option ng-repeat="usr in allDUsers track by usr.userId">{{usr.userId}}</option>
+                                                </select>
+                                            </div>
+                                            <div class="text-center">
+                                                <button type="submit" class="btn btn-default btn-sm" ng-click="deleteUser($event)">Delete</button>
+                                            </div>
+                                        </form>
+                                        <span ng-show="allDUsers.length != 0 && duf.userId.$touched && duf.userId.$error.required" class="editmsgs">UserId required. Select a email id</span><br>
+                                        <span ng-if="!duf.userId.$dirty" ng-bind="delerror" class="error"></span>
+                                        <span ng-if="!duf.userId.$touched && delSuccess" class="success">User deleted successfully</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="text-center">
+                                        <a href="#" ng-click="toggleUserEditor($event)">Reset password<span ng-show="!angular.isUndefined(bShowRPE)&& bShowRPE" class="glyphicon glyphicon-menu-up"></span><span ng-show="angular.isUndefined(bShowRPE) || !bShowRPE" class="glyphicon glyphicon-menu-down"></span>
+                                        </a>
+                                    </div>
+                                    <div class="well well-sm" ng-show="!angular.isUndefined(bShowRPE) && bShowRPE">
+                                        <form role="form" name="rpf">
+                                            <div class="form-group">
+                                                <a href="#" ng-click="refreshMUsers($event)" class="btn btn-info btn-xs">
+                                                    <span class="glyphicon glyphicon-refresh"></span> Refresh user list
+                                                </a>
+                                            </div>
+                                            <div class="form-group">
+                                                <select class="form-control" name="userId" ng-model="mUserId" required>
+                                                    <option value="">Select User</option>
+                                                    <option ng-repeat="usr in allMUsers track by usr.userId">{{usr.userId}}</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <input type="password" class="form-control" ng-model="mPassword" placeholder="Enter password here" name="password">
+                                            </div>
+                                            <div class="text-center">
+                                                <button type="submit" class="btn btn-default btn-sm" ng-click="modifyUser($event)">Reset</button>
+                                            </div>
+                                        </form>
+                                        <span ng-show="allMUsers.length != 0 && rpf.userId.$touched && rpf.userId.$error.required" class="editmsgs">UserId required. Select a email id</span><br>
+                                        <span ng-if="!rpf.userId.$dirty" ng-bind="moderror" class="error"></span>
+                                        <span ng-if="!(rpf.userId.$touched || rpf.password.$touched) && modSuccess" class="success">Password changed</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="well well-lg">
+                    <div class="text-center">
+                        <h4 id="adminmgmttitle">Broadcast post</h4>
+                    </div>
+                    <div class="text-center">
+                        <a href="#" ng-click="togglePostsEditor($event)">My posts<span ng-show="!angular.isUndefined(bShowPosts) && bShowPosts" class="glyphicon glyphicon-menu-up"></span><span ng-show="angular.isUndefined(bShowPosts) || !bShowPosts" class="glyphicon glyphicon-menu-down"></span>
+                        </a>
+                    </div>
+                </div>
+                <div class="well well-lg" ng-show="!angular.isUndefined(bShowPosts) && bShowPosts">
+                    <h4 id="poststitle">Posts <span class="badge">{{postpage.numPosts}}</span></h4>
+                    <form name="apf" role="form">
+                        <div class="form-group">
+                            <textarea name="post" ng-model="post" name="post" class="form-control" maxlength="500" required placeholder="Enter your post here"></textarea>
+                        </div>
+                        <div class="text-right">
+                            <button type="submit" ng-click="addPost($event)" class="btn btn-primary btn-xs">Broadcast Post</button>
+                        </div>
+                    </form>
+                    <div id="addError"></div>
+                    <div ng-if="!apf.post.$touched && !angular.isUndefined(pbroadcaststatus)" ng-bind="pbroadcaststatus"></div>
+                    <div class="text-center">
+                        <a href="#" ng-click="loadNextPage($event)" class="btn btn-info btn-xs">
+                            <span class="glyphicon glyphicon-circle-arrow-up"></span>
+                        </a>
+                        <a href="#" ng-if="postpage.endId != '-1'" ng-click="refreshCurrentPage($event)" class="btn btn-info btn-xs">
+                            <span class="glyphicon glyphicon-refresh"></span>
+                        </a>
+                        <a href="#" ng-if="!postpage.bLastPage" ng-click="loadPreviousPage($event)" class="btn btn-info btn-xs">
+                            <span class="glyphicon glyphicon-circle-arrow-down"></span>
+                        </a>
+                    </div>
+                    <div class="well well-lg" ng-repeat="pst in postpage.arr track by pst.id">
+                        <div class="text-right">
+                            <h6 class="postedby"><span class="user">{{pst.userId}}</span> on {{pst.postedOn}}</h6>
+                        </div>
+                        <div class="postmsg"><span>{{pst.post}}</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript">
+        var app = angular.module('admin',  ["ngCookies"]);
+        app.config(['$locationProvider', function AppConfig($locationProvider) {
+            $locationProvider.html5Mode({enabled: true, requireBase: false}).hashPrefix('*');
+        }]);
+
+        app.controller('adminCtrl', function($scope, $http, $location, $window, $cookies) {
+            // Initialize the view
+            $scope.conerror = "";
+            $scope.adderror= "";
+            $scope.delerror = "";
+            $scope.moderror = "";
+            $scope.addSuccess = false;
+            $scope.delSuccess = false;
+            $scope.modSuccess = false;
+            $scope.users=[];
+            $scope.allMUsers=[];
+            $scope.allDUsers=[];
+
+            $scope.loggedInUser = function() {
+                return $cookies.get("userId");
+            };
+
+            $scope.loggedInUserGroup = function() {
+                return $cookies.get("groupId");
+            };
+
+            $scope.showPosts = function(event) {
+                event.preventDefault();
+                $location.path("@routes.PostController.getPosts").replace();
+                $window.location.href = $location.absUrl();
+            };
+
+            // logout and goto home page
+            $scope.signOut = function(event) {
+                event.preventDefault();
+                $cookies.remove("userId");
+                $cookies.remove("groupId");
+                $cookies.remove("tzoffset");
+                $location.path("@routes.HomeController.logout").replace();
+                $window.location.href = $location.absUrl();
+            };
+
+            // add post event handler
+            $scope.addPost = function(event) {
+                event.preventDefault();
+
+                $scope.pbroadcaststatus = "";
+                $scope.apf.post.$touched = false;
+                // validate the posts form
+                if ($scope.apf.post.$error.required) {
+                    return;
+                }
+
+                // post the message
+                $scope.conerror = "";
+                $scope.padderror = "";
+                $scope.pbroadcaststatus = "Posting and broadcasting...";
+                $("#addError").html("");
+                $http({
+                        method : "POST",
+                        url : "@routes.PostController.addPostAndBroadcast",
+                        data : {"post" : $scope.post},
+                        headers : {
+                            "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                        $scope.pbroadcaststatus = "Done";
+                        $scope.post = "";
+                        $scope.loadFirstPage();
+                    }, function errorCallback(response) {
+                        $scope.pbroadcaststatus = "Error occured while posting and broadcasting.";
+                        if (response.status == 400) {
+                            $scope.padderror = response.data.error;
+                            $("#addError").html("<div id='aErr' class='alert alert-danger'><a class='close' data-dismiss='alert'>&times;</a>" + $scope.padderror + "</div>");
+                        } else {
+                            if (response.status == 403)
+                                $scope.showForbiddenPage();
+                            else {
+                                $scope.conerror = "Error posting the message. Retry";
+                                $('#conError').modal('show');
+                            }
+                        }
+                    });
+            };
+
+            // post page loader
+            $scope.loadPage = function(url) {
+                $scope.conerror = "";
+                $http({
+                        method : "GET",
+                        url : url,
+                        headers : {
+                            "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                        $scope.postpage = response.data;
+                    }, function errorCallback(response) {
+                         if (response.status == 403)
+                            $scope.showForbiddenPage();
+                         else {
+                            $scope.conerror = "Error retrieving the post page from the server. Retry.";
+                            $('#conError').modal('show');
+                         }
+                    });
+            };
+
+            // refreshes the current page
+            $scope.refreshCurrentPage = function(event) {
+                if (event != null)
+                    event.preventDefault();
+                $scope.loadPage("/posts/userbposts/refresh/" + $scope.postpage.endId);
+            };
+
+            // next page event handler
+            $scope.loadNextPage = function(event) {
+                event.preventDefault();
+                $scope.loadPage("/posts/userbposts/after/" + $scope.postpage.beginId);
+            };
+
+            // previous page event handler
+            $scope.loadPreviousPage = function(event) {
+                event.preventDefault();
+                $scope.loadPage("/posts/userbposts/before/" + $scope.postpage.endId);
+            };
+
+            // loads the first page
+            $scope.loadFirstPage = function() {
+                $scope.postpage.numPosts = "0";
+                $scope.postpage.bLastPage = false;
+                $scope.postpage.arr = [];
+                $scope.postpage.beginId = "-1";
+                $scope.postpage.endId = "-1";
+                $scope.loadPage("/posts/userbposts/first");
+            };
+
+            // toggles the comment editor for a post
+            $scope.togglePostsEditor = function(event) {
+                event.preventDefault();
+                if(angular.isUndefined($scope.bShowPosts)) {
+                    $scope.bShowPosts = true;
+                    $scope.padderror = "";
+                    $scope.postpage = new Object();
+                    $scope.loadFirstPage();
+                } else {
+                    $scope.bShowPosts = !$scope.bShowPosts;
+                }
+            };
+
+            $scope.showForbiddenPage = function() {
+                $cookies.remove("userId");
+                $cookies.remove("groupId");
+                $cookies.remove("tzoffset");
+                $location.path("@routes.AdminController.showForbiddenPage").replace();
+                $window.location.href = $location.absUrl();
+            };
+
+           $scope.refreshMUsers = function(event){
+                $scope.loadAllUsers(0, event);
+                $scope.mUserId = "";
+                $scope.moderror = "";
+                $scope.rpf.userId.$touched = false;
+                $scope.rpf.password.$touched = false;
+                $scope.modSuccess = false;
+            };
+
+            $scope.modifyUser  = function(event) {
+                event.preventDefault();
+
+                // validate the modify user form
+                if ($scope.rpf.userId.$error.required || !$scope.rpf.userId.$dirty) {
+                    $scope.rpf.userId.$touched = true;
+                    return;
+                }
+
+                $scope.conerror = "";
+                $scope.moderror = "";
+                $scope.modSuccess = false;
+                $http({
+                        method : "PUT",
+                        url : "@routes.AdminController.modifyUser",
+                        data : {"userId" : $scope.mUserId, "password" : $scope.mPassword},
+                        headers : {
+                            "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                        $scope.mUserId = null;
+                        $scope.mPassword = "";
+                        $scope.rpf.userId.$touched = false;
+                        $scope.rpf.password.$touched = false;
+                        $scope.modSuccess = true;
+                    }, function errorCallback(response) {
+                        if (response.status == 400) {
+                            $scope.moderror = response.data.error;
+                            $scope.rpf.$setPristine();
+                        } else {
+                            if (response.status == 403)
+                                $scope.showForbiddenPage();
+                            else {
+                                $scope.conerror = "Error trying to reset the password. Retry.";
+                                $('#conError').modal('show');
+                            }
+                        }
+                    });
+            };
+
+            $scope.toggleUserEditor = function(event) {
+                event.preventDefault();
+                if(angular.isUndefined($scope.bShowRPE)) {
+                    $scope.bShowRPE = true;
+                    $scope.loadAllUsers(0, null);
+                } else {
+                    $scope.bShowRPE = !$scope.bShowRPE;
+                }
+            };
+
+            $scope.loadAllUsers = function(dorm, event) { // todo: serialize calls
+                if (event != null)
+                    event.preventDefault();
+                $scope.conerror = "";
+
+                if(dorm == 0)
+                    $scope.allMUsers = [];
+                else
+                    $scope.allDUsers = [];
+                $http({
+                        method : "GET",
+                        url : "@routes.AdminController.getUsers",
+                        headers : {
+                        "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                        if(dorm == 0)
+                            $scope.allMUsers = response.data;
+                        else
+                            $scope.allDUsers = response.data;
+                    }, function errorCallback(response) {
+                        if (response.status == 403)
+                            $scope.showForbiddenPage();
+                        else {
+                            $scope.conerror = "Error refreshing the list of all users. Retry.";
+                            $('#conError').modal('show');
+                        }
+                    }
+                );
+            };
+
+            $scope.refreshDUsers = function(event){
+                $scope.loadAllUsers(1,event);
+                $scope.dUserId = "";
+                $scope.delerror = "";
+                $scope.duf.userId.$touched = false;
+                $scope.delSuccess = false;
+            };
+
+            $scope.deleteUser  = function(event) {
+                event.preventDefault();
+
+                // validate the delete user form
+                if ($scope.duf.userId.$error.required || !$scope.duf.userId.$dirty) {
+                    $scope.duf.userId.$touched = true;
+                    return;
+                }
+
+                $scope.conerror = "";
+                $scope.delerror = "";
+                $scope.delSuccess = false;
+                $http({
+                        method : "DELETE",
+                        url : "user/" + $scope.dUserId,
+                        headers : {
+                            "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                        $scope.dUserId = "";
+                        $scope.duf.userId.$touched = false;
+                        $scope.delSuccess = true;
+                        $scope.loadAllUsers(1,null);
+                    }, function errorCallback(response) {
+                        if (response.status == 400) {
+                            $scope.delerror = response.data.error;
+                            $scope.duf.$setPristine();
+                        } else {
+                            if (response.status == 403)
+                                $scope.showForbiddenPage();
+                            else {
+                                $scope.conerror = "Error trying to delete the user. Retry.";
+                                $('#conError').modal('show');
+                            }
+                        }
+                    });
+            };
+
+            $scope.toggleDelUserEditor = function(event) {
+                event.preventDefault();
+                if(angular.isUndefined($scope.bShowDUE)) {
+                    $scope.bShowDUE = true;
+                    $scope.loadAllUsers(1,null);
+                } else {
+                    $scope.bShowDUE = !$scope.bShowDUE;
+                }
+            };
+
+            $scope.addUser  = function(event) {
+                event.preventDefault();
+
+                // validate the add user form
+                if ($scope.auf.userId.$error.required || $scope.auf.userId.$error.email || !($scope.auf.userId.$dirty || $scope.auf.password.$dirty)) {
+                    $scope.auf.userId.$touched = true;
+                    return;
+                }
+
+                $scope.conerror = "";
+                $scope.adderror = "";
+                $scope.addSuccess = false;
+                $http({
+                        method : "POST",
+                        url : "@routes.AdminController.addUser",
+                        data : {"userId" : $scope.nUserId, "password" : $scope.nPassword},
+                        headers : {
+                            "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                        $scope.nUserId = "";
+                        $scope.nPassword = "";
+                        $scope.auf.userId.$touched = false;
+                        $scope.auf.password.$touched = false;
+                        $scope.addSuccess = true;
+                    }, function errorCallback(response) {
+                        if (response.status == 400) {
+                            $scope.adderror = response.data.error;
+                            $scope.auf.$setPristine();
+                        } else {
+                            if (response.status == 403)
+                                $scope.showForbiddenPage();
+                            else {
+                                $scope.conerror = "Error trying to add the user. Retry.";
+                                $('#conError').modal('show');
+                            }
+                        }
+                    });
+            };
+
+            $scope.toggleAddUserEditor = function(event) {
+                event.preventDefault();
+                if(angular.isUndefined($scope.bShowAUE)) {
+                    $scope.bShowAUE = true;
+                    $scope.nUserId = "";
+                    $scope.nPassword = "";
+                } else {
+                    $scope.bShowAUE = !$scope.bShowAUE;
+                }
+            };
+
+            $scope.loadUserSummary = function() {
+                $scope.conerror = "";
+                $scope.users=[];
+                $http({
+                        method : "GET",
+                        url : "@routes.HomeController.getUserSummary",
+                        headers : {
+                        "Content-Type" : "application/json"
+                        }
+                    }).then(function successCallback(response) {
+                        $scope.users = response.data;
+                    }, function errorCallback(response) {
+                        if (response.status == 403)
+                            $scope.showForbiddenPage();
+                        else {
+                            $scope.conerror = "Error refreshing the user summary. Retry.";
+                            $('#conError').modal('show');
+                        }
+                    }
+                );
+            };
+            $scope.loadUserSummary();
+        });
+    </script>
+</body>
+</html>

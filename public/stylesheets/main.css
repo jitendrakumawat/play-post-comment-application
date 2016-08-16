@@ -1,0 +1,39 @@
+#summarytitle {
+    display : inline-block;
+    white-space: pre-wrap;
+    color:  #666666;
+    text-align: center;
+}
+
+.text-right {
+    margin-top : 2px;
+}
+
+.text-center {
+    margin-top : 2px;
+    margin-bottom : 2px;
+}
+
+#groupsmgmttitle {
+    display : inline-block;
+    white-space: pre-wrap;
+    color: #666666;
+    text-align: center;
+}
+#groupusersmgmttitle {
+     display : inline-block;
+     white-space: pre-wrap;
+     color: #666666;
+     text-align: center;
+ }
+
+ #logintitle {
+      display : inline-block;
+      white-space: pre-wrap;
+      color: #666666;
+      text-align: center;
+  }
+
+.selectedaction {
+    background-color : #b8f8c2;
+}
