@@ -1,4 +1,4 @@
-This is your new Play application
+This is  new Play java  application for post
 =================================
 
 This file will be packaged with your application when using `activator dist`.
