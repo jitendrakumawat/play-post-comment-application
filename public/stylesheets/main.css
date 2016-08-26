@@ -5,6 +5,9 @@
     text-align: center;
 }
 
+.container-fluid{
+    background-color:#3B5998;
+}
 .text-right {
     margin-top : 2px;
 }
